@@ -111,6 +111,52 @@ class CacheEntryTest extends TestCase
         }
     }
 
+    public function testSerializationShouldNotMutateCacheEntry()
+    {
+        $request = new Request(
+            'GET',
+            'test.local',
+            [],
+            'Sample body' // Always include a body in the request to be sure there is a stream in it
+        );
+        $response = new Response(
+            200, [
+            'Cache-Control' => 'max-age=60',
+        ],
+            'Test content'
+        );
+        $cacheEntry = new CacheEntry($request, $response, $this->makeDateTimeOffset(10));
+
+        $originalCacheEntry = clone $cacheEntry;
+
+        serialize($cacheEntry);
+
+        $this->assertEquals($cacheEntry, $originalCacheEntry);
+    }
+
+    /**
+     * @dataProvider versionsToTestProvider
+     */
+    public function testPreviousUnserialize($version)
+    {
+        if (version_compare(PHP_VERSION, '7.4.0') < 0) {
+            $this->markTestSkipped('Compat with previous version is not available with \Serializable interface');
+        }
+
+        $cacheEntry = unserialize(file_get_contents(__DIR__."/data/{$version}_serialized_cache_entry"));
+
+        self::assertInstanceOf(CacheEntry::class, $cacheEntry);
+    }
+
+    public function versionsToTestProvider()
+    {
+        return [
+            ['v4.0.0'],
+            ['v4.1.0'],
+            ['v4.1.1'],
+        ];
+    }
+
     private function setResponseHeader($name, $value)
     {
         $this->responseHeaders[$name] = [$value];
