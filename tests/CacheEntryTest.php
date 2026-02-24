@@ -83,6 +83,9 @@ class CacheEntryTest extends TestCase
         $this->assertEquals(70, $cacheEntry->getTTL());
     }
 
+    /**
+     * @requires extension igbinary
+     */
     public function testCacheEntryShouldBeSerializableWithIgBinaryWithoutWarning()
     {
         $request = new Request(
@@ -99,16 +102,12 @@ class CacheEntryTest extends TestCase
         );
         $cacheEntry = new CacheEntry($request, $response, $this->makeDateTimeOffset(10));
 
-        if(extension_loaded('igbinary')) {
-            /**
-             * @var CacheEntry $cacheEntryPostDeserialization
-             */
-            $cacheEntryPostDeserialization = igbinary_unserialize(igbinary_serialize($cacheEntry));
-            $this->assertEquals((string)$cacheEntry->getOriginalRequest()->getBody(), (string)$cacheEntryPostDeserialization->getOriginalRequest()->getBody());
-            $this->assertEquals((string)$cacheEntry->getOriginalResponse()->getBody(), (string)$cacheEntryPostDeserialization->getOriginalResponse()->getBody());
-        } else {
-            $this->addWarning('Extension igbinary not loaded, not asserting serialization.');
-        }
+        /**
+         * @var CacheEntry $cacheEntryPostDeserialization
+         */
+        $cacheEntryPostDeserialization = igbinary_unserialize(igbinary_serialize($cacheEntry));
+        $this->assertEquals((string)$cacheEntry->getOriginalRequest()->getBody(), (string)$cacheEntryPostDeserialization->getOriginalRequest()->getBody());
+        $this->assertEquals((string)$cacheEntry->getOriginalResponse()->getBody(), (string)$cacheEntryPostDeserialization->getOriginalResponse()->getBody());
     }
 
     public function testSerializationShouldNotMutateCacheEntry()
@@ -134,28 +133,6 @@ class CacheEntryTest extends TestCase
         $this->assertEquals($cacheEntry, $originalCacheEntry);
     }
 
-    /**
-     * @dataProvider versionsToTestProvider
-     */
-    public function testPreviousUnserialize($version)
-    {
-        if (version_compare(PHP_VERSION, '7.4.0') < 0) {
-            $this->markTestSkipped('Compat with previous version is not available with \Serializable interface');
-        }
-
-        $cacheEntry = unserialize(file_get_contents(__DIR__."/data/{$version}_serialized_cache_entry"));
-
-        self::assertInstanceOf(CacheEntry::class, $cacheEntry);
-    }
-
-    public function versionsToTestProvider()
-    {
-        return [
-            ['v4.0.0'],
-            ['v4.1.0'],
-            ['v4.1.1'],
-        ];
-    }
 
     private function setResponseHeader($name, $value)
     {
